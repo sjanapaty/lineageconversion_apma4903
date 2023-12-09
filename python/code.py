@@ -11,10 +11,12 @@ Size = 50  # 10x10 grid
 states = 6  # Number of species
 Tmax = 10  # Maximum time
 # numerical parameters
-run_method = "RK45"  # You can use 'BDF' if the system is stiff
 run_method = "BDF"  # You can use 'BDF' if the system is stiff
+run_method = "RK45"  # You can use 'BDF' if the system is stiff
 run_rtol = 1e-6
 run_atol = 1e-8
+Movie = True  # Set to True to save a movie of the simulation
+Notebook = False  # Set to True if running in a Jupyter notebook
 
 # derived run parameters:
 # Grid dimensions
@@ -148,53 +150,60 @@ for t_idx, time_point in enumerate(time_points):
     plt.colorbar()
     plt.show()
 
+if Movie:
+    # Function to create CMYK overlay
+    print("Saving animation to file...")
+    def create_cmyk_frame(concentration_history, t_idx):
+        cmy_image = np.zeros((*concentration_history[0, :, :, t_idx].shape, 3))
+        for i in range(3):
+            cmy_image[..., i] = concentration_history[i, :, :, t_idx] / np.max(
+                concentration_history[i, :, :, t_idx]
+            )
 
-# Function to create CMYK overlay
-def create_cmyk_frame(concentration_history, t_idx):
-    cmy_image = np.zeros((*concentration_history[0, :, :, t_idx].shape, 3))
-    for i in range(3):
-        cmy_image[..., i] = concentration_history[i, :, :, t_idx] / np.max(
-            concentration_history[i, :, :, t_idx]
-        )
+        # Convert CMY to RGB (ignoring black for overlay)
+        rgb_image = 1 - cmy_image
+        return rgb_image.clip(0, 1)
 
-    # Convert CMY to RGB (ignoring black for overlay)
-    rgb_image = 1 - cmy_image
-    return rgb_image.clip(0, 1)
+    # ... (rest of your code for the CMYK frame creation)
 
-# ... (rest of your code for the CMYK frame creation)
-
-# Initialize the figure for animation
-fig, ax = plt.subplots()
-print("creating cmyk frame...")
-cmyk_frame = create_cmyk_frame(concentration_history, 0)
-im = ax.imshow(cmyk_frame)
-ax.set_title(f"CMYK Overlay at time {time_points[0]:.2f}")
-
-
-
-# Function to update the frame for the animation
-def update(frame):
-    cmyk_frame = create_cmyk_frame(concentration_history, frame)
-    # im.set_array(cmyk_frame)
-    im.set_data(cmyk_frame)
-    ax.set_title(f"CMYK Overlay at time {time_points[frame]:.2f}")
-    return [im]
+    # Initialize the figure for animation
+    fig, ax = plt.subplots()
+    print("Creating animation...")
+    cmyk_frame = create_cmyk_frame(concentration_history, 0)
+    im = ax.imshow(cmyk_frame)
+    ax.set_title(f"CMYK Overlay at time {time_points[0]:.2f}")
 
 
-# Create the animation
-print("Animating...")
-ani = FuncAnimation(fig, update, frames=len(time_points), blit=True)
+    # Function to update the frame for the animation
+    def update(frame):
+        cmyk_frame = create_cmyk_frame(concentration_history, frame)
+        # im.set_array(cmyk_frame)
+        im.set_data(cmyk_frame)
+        ax.set_title(f"CMYK Overlay at time {time_points[frame]:.2f}")
+        return [im]
 
-# To display the animation in a Jupyter notebook
-from IPython.display import HTML
 
-HTML(ani.to_html5_video())
+    # Create the animation
+    print("<FuncAnimation|...")
+    ani = FuncAnimation(fig, update, frames=len(time_points), blit=True)
+    print("...|FuncAnimation>")
 
-# To save the animation to a file
-# filename is a string with the name of the file to save to
-# but the filename includes the variable "method"
-filename = "cmyk_animation_%s.mp4" % run_method
+    # To display the animation in a Jupyter notebook
+    
+    if Notebook:
+        from IPython.display import HTML
+        HTML(ani.to_html5_video())
+    else:
+        #print("<ani.save|...")
+        #ani.save("cmyk_animation.mp4", writer="ffmpeg")
+        #print("...|ani.save>")
+        # To save the animation to a file
+        filename = "cmyk_animation_%s.mp4" % run_method
+        print(filename)
+        #print("<ani.save|...")
+        #ani.save("cmyk_animation.mp4", writer="ffmpeg")
+        ani.save(filename, writer="ffmpeg")
+        #print("...|ani.save>")
 
-ani.save(filename, writer="ffmpeg")
 
-# Make sure to have ffmpeg installed for video saving and displaying
+    # Make sure to have ffmpeg installed for video saving and displaying
